@@ -1,0 +1,5089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chrome 扩展开发完整教程</title>
+<style>
+* {margin: 0; padding: 0; box-sizing: border-box;}
+
+:root {
+  --primary: #667eea;
+  --secondary: #764ba2;
+  --dark: #1e293b;
+  --gray: #64748b;
+  --bg: #f8fafc;
+  --white: #fff;
+  --sidebar-width: 260px;
+  --navbar-height: 60px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+  line-height: 1.7;
+  color: var(--dark);
+  background: var(--bg);
+}
+
+/* ========== 顶部导航 ========== */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.98);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+  height: var(--navbar-height);
+}
+
+.nav-container {
+  max-width: 100%;
+  height: 100%;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.menu-toggle {
+  display: none;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+/* ========== 侧边栏 ========== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: var(--navbar-height);
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--white);
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  z-index: 99;
+  transition: transform 0.3s ease;
+}
+
+.toc-header {
+  padding: 1.2rem 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  font-size: 0.95rem;
+}
+
+.toc-list {padding: 0.8rem;}
+.toc-section {margin-bottom: 1.2rem;}
+
+.toc-section-title {
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding-left: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.toc-item {
+  padding: 0.5rem 0.8rem;
+  color: var(--gray);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+}
+
+.toc-item:hover {
+  background: var(--bg);
+  color: var(--primary);
+  transform: translateX(5px);
+}
+
+.toc-item.active {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-weight: 600;
+}
+
+/* ========== 主内容区 ========== */
+.main-content {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--navbar-height);
+  padding: 1.5rem;
+  min-height: calc(100vh - var(--navbar-height));
+  transition: margin-left 0.3s ease;
+}
+
+.container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* ========== Hero 区域 ========== */
+.hero {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.12);
+}
+
+.hero h1 {
+  font-size: 2.2rem;
+  margin-bottom: 0.8rem;
+  font-weight: 900;
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.95;
+  margin-bottom: 1.5rem;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  background: rgba(255,255,255,0.2);
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+/* ========== 章节 ========== */
+.chapter {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(15px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.chapter-number {
+  min-width: 55px;
+  height: 55px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.chapter-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.chapter-content {
+  color: var(--gray);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.chapter-content h2 {
+  font-size: 1.5rem;
+  color: var(--dark);
+  margin: 1.5rem 0 1rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.4rem;
+}
+
+.chapter-content h3 {
+  font-size: 1.2rem;
+  color: var(--dark);
+  margin: 1.2rem 0 0.8rem;
+}
+
+.chapter-content p {margin-bottom: 0.9rem;}
+
+.chapter-content ul, .chapter-content ol {
+  margin: 0.8rem 0 0.8rem 1.8rem;
+}
+
+.chapter-content li {
+  margin-bottom: 0.4rem;
+}
+
+/* ========== 代码块 ========== */
+.code-block {
+  background: #1e293b;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1.2rem 0;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+  max-width: 100%;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.code-lang {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.copy-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 0.35rem 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.copy-btn:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.code-content {
+  color: #e2e8f0;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  padding: 1.2rem;
+  max-width: 100%;
+}
+
+.code-content::-webkit-scrollbar {
+  height: 7px;
+}
+
+.code-content::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.code-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+
+.code-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* ========== 信息卡片 ========== */
+.info-card {
+  padding: 1.2rem;
+  border-radius: 10px;
+  margin: 1.2rem 0;
+  border-left: 4px solid;
+}
+
+.info-card.tip {background: #dbeafe; border-color: #3b82f6;}
+.info-card.warning {background: #fef3c7; border-color: #f59e0b;}
+.info-card.success {background: #dcfce7; border-color: #10b981;}
+
+.info-card-title {
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  font-size: 1rem;
+  color: var(--dark);
+}
+
+/* ========== 特性网格 ========== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.2rem;
+  margin: 1.5rem 0;
+}
+
+.feature-card {
+  background: var(--white);
+  padding: 1.3rem;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s;
+}
+
+.feature-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(102,126,234,0.18);
+}
+
+.feature-icon {font-size: 2.3rem; margin-bottom: 0.8rem;}
+
+.feature-title {
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  color: var(--dark);
+  font-size: 1rem;
+}
+
+.feature-desc {color: var(--gray); font-size: 0.88rem;}
+
+/* ========== 表格 ========== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  display: block;
+  overflow-x: auto;
+}
+
+thead {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+th, td {
+  padding: 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+tbody tr:hover {background: var(--bg);}
+
+/* ========== 返回顶部 ========== */
+.fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+  font-size: 1.4rem;
+  z-index: 999;
+  transition: transform 0.3s;
+}
+
+.fab:hover {transform: scale(1.08);}
+
+/* ========== 响应式 - 平板 ========== */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 1.2rem;
+  }
+  
+  .hero h1 {
+    font-size: 1.9rem;
+  }
+  
+  .chapter {
+    padding: 1.5rem;
+  }
+  
+  .chapter-number {
+    min-width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+  
+  .chapter-title {
+    font-size: 1.4rem;
+  }
+}
+
+/* ========== 响应式 - 手机 ========== */
+@media (max-width: 640px) {
+  :root {
+    --navbar-height: 55px;
+  }
+  
+  .logo {
+    font-size: 1.1rem;
+  }
+  
+  .hero {
+    padding: 1.8rem 1.2rem;
+  }
+  
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .chapter {
+    padding: 1rem;
+  }
+  
+  .chapter-header {
+    gap: 0.9rem;
+  }
+  
+  .chapter-number {
+    min-width: 42px;
+    height: 42px;
+    font-size: 1rem;
+  }
+  
+  .chapter-title {
+    font-size: 1.2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .code-content {
+    font-size: 0.75rem;
+    padding: 1rem;
+  }
+  
+  .fab {
+    bottom: 1rem;
+    right: 1rem;
+    width: 46px;
+    height: 46px;
+    font-size: 1.2rem;
+  }
+}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="logo">🚀 Chrome 扩展开发教程</div>
+    <button class="menu-toggle" onclick="toggleSidebar()">☰ 目录</button>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <div class="toc-header">📚 课程目录</div>
+  <div class="toc-list" id="tocList"></div>
+</aside>
+
+<main class="main-content">
+  <div class="container" id="content"></div>
+</main>
+
+<div class="fab" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+<script>
+const courseData = {
+  sections: [
+    // 新增：第零部分 - Web 基础
+    {title: '第零部分：Web 基础入门', chapters: [
+      {id: -5, title: 'HTML 基础入门'},
+      {id: -4, title: 'CSS 样式设计'},
+      {id: -3, title: 'JavaScript 基础'},
+      {id: -2, title: 'DOM 操作与事件'},
+      {id: -1, title: 'ES6+ 现代语法'},
+      {id: 0, title: '异步编程与 Fetch'}
+    ]},
+    {title: '第一部分：基础架构', chapters: [
+      {id: 1, title: 'Chrome 扩展架构概述'},
+      {id: 2, title: 'Manifest V3 配置详解'},
+      {id: 3, title: '三层架构设计'}
+    ]},
+    {title: '第二部分：核心技术', chapters: [
+      {id: 4, title: '扩展内部通信机制'},
+      {id: 5, title: '跨扩展与跨域通信'},
+      {id: 6, title: '数据存储与管理'}
+    ]},
+    {title: '第三部分：前端开发', chapters: [
+      {id: 7, title: 'React 在扩展中的应用'},
+      {id: 8, title: 'UI 组件开发'},
+      {id: 9, title: '自定义 Hooks'}
+    ]},
+    {title: '第四部分：高级技术', chapters: [
+      {id: 10, title: 'Proxy 增强 Chrome API'},
+      {id: 11, title: '网络请求拦截'},
+      {id: 12, title: '虚拟滚动优化'}
+    ]},
+    {title: '第五部分：工程化实践', chapters: [
+      {id: 13, title: '构建工具配置'},
+      {id: 14, title: '代码规范与测试'},
+      {id: 15, title: '性能优化策略'}
+    ]},
+    {title: '第六部分：实战项目', chapters: [
+      {id: 16, title: 'Instagram 下载器'},
+      {id: 17, title: '发布与维护'}
+    ]},
+    // 新增高级部分
+    {title: '第七部分：高级进阶', chapters: [
+      {id: 18, title: 'WebAssembly 集成'},
+      {id: 19, title: 'IndexedDB 大数据处理'},
+      {id: 20, title: 'Service Worker 离线缓存'}
+    ]},
+    {title: '第八部分：安全与逆向', chapters: [
+      {id: 21, title: '代码混淆与反调试'},
+      {id: 22, title: 'API 加密与签名'},
+      {id: 23, title: '逆向工程与反爬虫'}
+    ]},
+    {title: '第九部分：企业级应用', chapters: [
+      {id: 24, title: '微前端架构'},
+      {id: 25, title: 'Shadow DOM 隔离'},
+      {id: 26, title: '插件化系统设计'}
+    ]},
+    {title: '第十部分：终极实战', chapters: [
+      {id: 27, title: 'AI 增强扩展'},
+      {id: 28, title: '实时协作扩展'},
+      {id: 29, title: '浏览器自动化'},
+      {id: 30, title: '商业化与盈利模式'}
+    ]}
+  ]
+};
+
+// 在 chapters 对象中添加以下内容，替换原来的占位符
+
+const chapters = {
+  1: {
+    title: 'Chrome 扩展架构概述',
+    content: `
+<h2>🏗️ 扩展的组成部分</h2>
+<p>Chrome 扩展由以下核心部分组成：</p>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">📄</div>
+    <div class="feature-title">Manifest 文件</div>
+    <div class="feature-desc">扩展的"身份证"，定义所有配置信息</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⚙️</div>
+    <div class="feature-title">Background</div>
+    <div class="feature-desc">后台脚本，处理业务逻辑</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📝</div>
+    <div class="feature-title">Content Scripts</div>
+    <div class="feature-desc">注入到网页的脚本</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎨</div>
+    <div class="feature-title">UI Pages</div>
+    <div class="feature-desc">Popup、Options 等界面</div>
+  </div>
+</div>
+
+<h2>🔄 执行环境对比</h2>
+<table>
+  <thead>
+    <tr>
+      <th>环境</th>
+      <th>DOM访问</th>
+      <th>Chrome API</th>
+      <th>网页变量</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Background</td><td>❌</td><td>✅ 完整</td><td>❌</td></tr>
+    <tr><td>Content Script</td><td>✅</td><td>⚠️ 部分</td><td>❌ 隔离</td></tr>
+    <tr><td>Popup/Options</td><td>✅ 自身</td><td>✅ 完整</td><td>❌</td></tr>
+  </tbody>
+</table>
+
+<h2>📝 基本示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - manifest.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">{
+  "manifest_version": 3,
+  "name": "我的第一个扩展",
+  "version": "1.0.0",
+  "description": "Chrome 扩展示例",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["https://*/*"],
+    "js": ["content.js"]
+  }],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage", "activeTab"]
+}</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 重点理解</div>
+  <p>Content Script 和网页是完全隔离的！即使在同一个页面，它们也无法直接访问彼此的变量和函数。需要通过 window.postMessage 进行通信。</p>
+</div>
+    `
+  },
+
+  2: {
+    title: 'Manifest V3 配置详解',
+    content: `
+<h2>📋 完整配置示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - manifest.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">{
+  "manifest_version": 3,
+  "name": "Instagram 下载器",
+  "version": "1.0.0",
+  "description": "一键下载 Instagram 图片和视频",
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [{
+    "matches": ["https://www.instagram.com/*"],
+    "js": ["content.js"],
+    "css": ["content.css"],
+    "run_at": "document_end"
+  }],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon48.png"
+  },
+  
+  "permissions": [
+    "storage",
+    "downloads",
+    "activeTab"
+  ],
+  
+  "host_permissions": [
+    "https://www.instagram.com/*"
+  ]
+}</div>
+</div>
+
+<h2>🔑 必需字段</h2>
+<ul>
+  <li><strong>manifest_version</strong>: 必须为 3</li>
+  <li><strong>name</strong>: 扩展名称（最多 45 字符）</li>
+  <li><strong>version</strong>: 版本号（如 1.0.0）</li>
+</ul>
+
+<h2>⏰ 注入时机</h2>
+<table>
+  <thead>
+    <tr><th>值</th><th>时机</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>document_start</td><td>DOM构建前</td><td>拦截脚本加载</td></tr>
+    <tr><td>document_end</td><td>DOM完成</td><td>操作DOM（推荐）</td></tr>
+    <tr><td>document_idle</td><td>页面空闲</td><td>非紧急操作</td></tr>
+  </tbody>
+</table>
+
+<div class="info-card warning">
+  <div class="info-card-title">⚠️ Manifest V2 已弃用</div>
+  <p>Chrome 将停止支持 Manifest V2。所有新扩展必须使用 V3。</p>
+</div>
+    `
+  },
+
+  3: {
+    title: '三层架构设计',
+    content: `
+<h2>🎯 架构概述</h2>
+<p>Chrome 扩展采用三层架构，各层职责清晰：</p>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">🖥️</div>
+    <div class="feature-title">UI Layer</div>
+    <div class="feature-desc">Popup/Options 界面展示</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⚙️</div>
+    <div class="feature-title">Business Layer</div>
+    <div class="feature-desc">Background 业务逻辑</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🌐</div>
+    <div class="feature-title">Content Layer</div>
+    <div class="feature-desc">网页内容交互</div>
+  </div>
+</div>
+
+<h2>📊 数据流转</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">数据流向</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">Popup → Background → Content Script → Web Page
+  ↓          ↓            ↓              ↓
+User      Logic       DOM Access    Page Data</div>
+</div>
+
+<h2>💡 设计原则</h2>
+<ul>
+  <li><strong>职责分离</strong>：UI 只负责展示，业务逻辑放 Background</li>
+  <li><strong>单向数据流</strong>：避免循环依赖</li>
+  <li><strong>最小权限</strong>：只申请必要的 API 权限</li>
+  <li><strong>异步优先</strong>：使用 Promise/async-await</li>
+</ul>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 最佳实践</div>
+  <p>将复杂的数据处理和网络请求放在 Background，Content Script 只做轻量级 DOM 操作。</p>
+</div>
+    `
+  },
+
+  4: {
+    title: '扩展内部通信机制',
+    content: `
+<h2>📡 通信方式概览</h2>
+<p>扩展内部有三种主要通信方式：</p>
+
+<h3>1. 一次性消息</h3>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 发送方</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// Popup 发送消息给 Background
+chrome.runtime.sendMessage({
+  action: 'getData',
+  params: { id: 123 }
+}, (response) => {
+  console.log('收到响应:', response);
+});</div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 接收方 (Background)</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'getData') {
+    // 处理请求
+    const data = fetchData(message.params.id);
+    sendResponse({ success: true, data });
+  }
+  return true; // 异步响应必须返回 true
+});</div>
+</div>
+
+<h3>2. 长连接</h3>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 建立连接</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// Content Script 连接 Background
+const port = chrome.runtime.connect({ name: 'my-channel' });
+
+port.onMessage.addListener((msg) => {
+  console.log('收到:', msg);
+});
+
+port.postMessage({ type: 'init' });</div>
+</div>
+
+<h3>3. 跨 Tab 通信</h3>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 发送给特定 Tab
+chrome.tabs.sendMessage(tabId, {
+  action: 'updateUI',
+  data: newData
+});</div>
+</div>
+
+<div class="info-card warning">
+  <div class="info-card-title">⚠️ 注意事项</div>
+  <ul>
+    <li>异步响应必须 return true</li>
+    <li>长连接断开后需要重新建立</li>
+    <li>消息大小有限制（通常 64MB）</li>
+  </ul>
+</div>
+    `
+  },
+
+  5: {
+    title: '跨扩展与跨域通信',
+    content: `
+<h2>🔗 跨扩展通信</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 发送给其他扩展</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 向特定扩展发送消息
+chrome.runtime.sendMessage(
+  'extensionId12345',
+  { greeting: 'hello' },
+  (response) => {
+    console.log(response);
+  }
+);</div>
+</div>
+
+<h2>🌐 跨域请求</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - Background 发起请求</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// Background 可以跨域请求
+async function fetchData(url) {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+  return await response.json();
+}</div>
+</div>
+
+<h2>🔐 CORS 处理</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - manifest.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">{
+  "host_permissions": [
+    "https://api.example.com/*",
+    "https://*.instagram.com/*"
+  ]
+}</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 最佳实践</div>
+  <p>将所有跨域请求集中在 Background 处理，Content Script 通过消息传递获取数据。</p>
+</div>
+    `
+  },
+
+  6: {
+    title: '数据存储与管理',
+    content: `
+<h2>💾 存储类型</h2>
+<table>
+  <thead>
+    <tr><th>类型</th><th>容量</th><th>同步</th><th>用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>storage.local</td><td>10MB</td><td>❌</td><td>本地数据</td></tr>
+    <tr><td>storage.sync</td><td>100KB</td><td>✅</td><td>跨设备同步</td></tr>
+    <tr><td>storage.session</td><td>10MB</td><td>❌</td><td>会话数据</td></tr>
+  </tbody>
+</table>
+
+<h2>📝 基本操作</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 存储</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 保存数据
+await chrome.storage.local.set({
+  user: { name: 'John', age: 30 },
+  settings: { theme: 'dark' }
+});
+
+// 读取数据
+const result = await chrome.storage.local.get(['user', 'settings']);
+console.log(result.user.name);
+
+// 删除数据
+await chrome.storage.local.remove('user');
+
+// 清空所有
+await chrome.storage.local.clear();</div>
+</div>
+
+<h2>🔔 监听变化</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">chrome.storage.onChanged.addListener((changes, areaName) => {
+  for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+    console.log(\`\${key} 从 \${oldValue} 变为 \${newValue}\`);
+  }
+});</div>
+</div>
+
+<div class="info-card warning">
+  <div class="info-card-title">⚠️ 注意</div>
+  <ul>
+    <li>storage.sync 有配额限制（每小时 120 次写入）</li>
+    <li>单个键值最大 8KB (sync) / 无限制 (local)</li>
+    <li>使用 JSON 序列化存储复杂对象</li>
+  </ul>
+</div>
+    `
+  },
+
+  7: {
+    title: 'React 在扩展中的应用',
+    content: `
+<h2>⚛️ 项目初始化</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">Bash</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"># 使用 Vite 创建项目
+npm create vite@latest my-extension -- --template react
+
+# 安装依赖
+cd my-extension
+npm install
+
+# 安装 Chrome 扩展类型定义
+npm install -D @types/chrome</div>
+</div>
+
+<h2>🔧 Vite 配置</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - vite.config.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: {
+        popup: 'popup.html',
+        options: 'options.html',
+        background: 'src/background.js'
+      },
+      output: {
+        entryFileNames: '[name].js',
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name].[ext]'
+      }
+    }
+  }
+});</div>
+</div>
+
+<h2>📱 Popup 组件</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX - Popup.jsx</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { useState, useEffect } from 'react';
+
+function Popup() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    // 从 Background 获取数据
+    chrome.runtime.sendMessage(
+      { action: 'getData' },
+      (response) => {
+        setData(response.data);
+      }
+    );
+  }, []);
+
+  return (
+    <div className="popup">
+      <h1>我的扩展</h1>
+      {data && <p>数据: {data}</p>}
+    </div>
+  );
+}
+
+export default Popup;</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 开发建议</div>
+  <ul>
+    <li>使用 Vite 或 Webpack 构建</li>
+    <li>Popup 尺寸建议 400x600px</li>
+    <li>避免在 Popup 中做重计算</li>
+  </ul>
+</div>
+    `
+  },
+
+  8: {
+    title: 'UI 组件开发',
+    content: `
+<h2>🎨 设计系统</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX - Button.jsx</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">export function Button({ 
+  children, 
+  variant = 'primary', 
+  onClick 
+}) {
+  const baseClass = 'px-4 py-2 rounded-lg font-medium transition';
+  const variants = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700',
+    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+  };
+
+  return (
+    <button 
+      className={\`\${baseClass} \${variants[variant]}\`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}</div>
+</div>
+
+<h2>📋 列表组件</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX - DownloadList.jsx</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { useState } from 'react';
+
+export function DownloadList() {
+  const [items, setItems] = useState([]);
+
+  const addItem = (item) => {
+    setItems(prev => [...prev, item]);
+  };
+
+  return (
+    <div className="download-list">
+      {items.map((item, index) => (
+        <div key={index} className="item">
+          <img src={item.thumb} alt="" />
+          <span>{item.name}</span>
+          <Button onClick={() => download(item)}>
+            下载
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}</div>
+</div>
+
+<h2>🎭 Loading 状态</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">function Spinner() {
+  return (
+    <div className="flex justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  );
+}</div>
+</div>
+    `
+  },
+
+  9: {
+    title: '自定义 Hooks',
+    content: `
+<h2>🪝 useStorage Hook</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - useStorage.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { useState, useEffect } from 'react';
+
+export function useStorage(key, defaultValue) {
+  const [value, setValue] = useState(defaultValue);
+
+  useEffect(() => {
+    // 读取初始值
+    chrome.storage.local.get([key], (result) => {
+      if (result[key] !== undefined) {
+        setValue(result[key]);
+      }
+    });
+
+    // 监听变化
+    const listener = (changes, area) => {
+      if (area === 'local' && changes[key]) {
+        setValue(changes[key].newValue);
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, [key]);
+
+  const updateValue = (newValue) => {
+    chrome.storage.local.set({ [key]: newValue });
+    setValue(newValue);
+  };
+
+  return [value, updateValue];
+}</div>
+</div>
+
+<h2>📨 useMessage Hook</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - useMessage.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">export function useMessage(handler) {
+  useEffect(() => {
+    chrome.runtime.onMessage.addListener(handler);
+    return () => {
+      chrome.runtime.onMessage.removeListener(handler);
+    };
+  }, [handler]);
+}</div>
+</div>
+
+<h2>🎯 使用示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">function Settings() {
+  const [theme, setTheme] = useStorage('theme', 'light');
+  
+  useMessage((msg, sender, sendResponse) => {
+    if (msg.action === 'updateTheme') {
+      setTheme(msg.theme);
+    }
+  });
+
+  return (
+    <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+      <option value="light">浅色</option>
+      <option value="dark">深色</option>
+    </select>
+  );
+}</div>
+</div>
+    `
+  },
+
+  10: {
+    title: 'Proxy 增强 Chrome API',
+    content: `
+<h2>🔧 API 包装器</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - chromeAPI.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 将 callback 风格转为 Promise
+const chromeAPI = new Proxy(chrome, {
+  get(target, prop) {
+    if (typeof target[prop] === 'object') {
+      return new Proxy(target[prop], {
+        get(subTarget, subProp) {
+          if (typeof subTarget[subProp] === 'function') {
+            return (...args) => {
+              return new Promise((resolve, reject) => {
+                subTarget[subProp](...args, (result) => {
+                  if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                  } else {
+                    resolve(result);
+                  }
+                });
+              });
+            };
+          }
+          return subTarget[subProp];
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+
+export default chromeAPI;</div>
+</div>
+
+<h2>✨ 使用示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import chromeAPI from './chromeAPI';
+
+// 原始方式
+chrome.storage.local.get(['key'], (result) => {
+  console.log(result);
+});
+
+// Proxy 增强后
+const result = await chromeAPI.storage.local.get(['key']);
+console.log(result);</div>
+</div>
+    `
+  },
+
+  11: {
+    title: '网络请求拦截',
+    content: `
+<h2>🌐 declarativeNetRequest</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - manifest.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">{
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  }
+}</div>
+</div>
+
+<h2>📋 规则配置</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - rules.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "MyExtension/1.0"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://api.example.com/*",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  }
+]</div>
+</div>
+
+<h2>🔍 动态规则</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 添加动态规则
+await chrome.declarativeNetRequest.updateDynamicRules({
+  addRules: [{
+    id: 1,
+    priority: 1,
+    action: { type: 'block' },
+    condition: {
+      urlFilter: 'https://blocked-site.com/*'
+    }
+  }],
+  removeRuleIds: [1]
+});</div>
+</div>
+    `
+  },
+
+  12: {
+    title: '虚拟滚动优化',
+    content: `
+<h2>⚡ 虚拟列表实现</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSX - VirtualList.jsx</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { useState, useRef, useEffect } from 'react';
+
+export function VirtualList({ items, itemHeight, containerHeight }) {
+  const [scrollTop, setScrollTop] = useState(0);
+  const containerRef = useRef(null);
+
+  const visibleCount = Math.ceil(containerHeight / itemHeight);
+  const startIndex = Math.floor(scrollTop / itemHeight);
+  const endIndex = startIndex + visibleCount + 1;
+  
+  const visibleItems = items.slice(startIndex, endIndex);
+  const offsetY = startIndex * itemHeight;
+
+  const handleScroll = (e) => {
+    setScrollTop(e.target.scrollTop);
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      style={{ height: containerHeight, overflow: 'auto' }}
+      onScroll={handleScroll}
+    >
+      <div style={{ height: items.length * itemHeight }}>
+        <div style={{ transform: \`translateY(\${offsetY}px)\` }}>
+          {visibleItems.map((item, index) => (
+            <div key={startIndex + index} style={{ height: itemHeight }}>
+              {item.content}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 性能提升</div>
+  <p>虚拟滚动可以将 10000 条数据的渲染时间从 3s 降低到 50ms！</p>
+</div>
+    `
+  },
+
+  13: {
+    title: '构建工具配置',
+    content: `
+<h2>📦 Webpack 配置</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - webpack.config.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
+
+module.exports = {
+  mode: 'production',
+  entry: {
+    popup: './src/popup/index.jsx',
+    background: './src/background/index.js',
+    content: './src/content/index.js'
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js'
+  },
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        use: 'babel-loader',
+        exclude: /node_modules/
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader', 'postcss-loader']
+      }
+    ]
+  },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        { from: 'public', to: '.' },
+        { from: 'manifest.json', to: '.' }
+      ]
+    })
+  ]
+};</div>
+</div>
+
+<h2>🚀 热重载</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">Bash</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">npm install -D webpack-extension-reloader</div>
+</div>
+    `
+  },
+
+  14: {
+    title: '代码规范与测试',
+    content: `
+<h2>📏 ESLint 配置</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JSON - .eslintrc.json</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">{
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended"
+  ],
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "webextensions": true
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "react/prop-types": "off"
+  }
+}</div>
+</div>
+
+<h2>🧪 单元测试</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - test/storage.test.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">import { describe, it, expect, vi } from 'vitest';
+
+describe('Storage', () => {
+  it('should save data', async () => {
+    global.chrome = {
+      storage: {
+        local: {
+          set: vi.fn((data) => Promise.resolve())
+        }
+      }
+    };
+
+    await saveData('key', 'value');
+    expect(chrome.storage.local.set).toHaveBeenCalled();
+  });
+});</div>
+</div>
+    `
+  },
+
+  15: {
+    title: '性能优化策略',
+    content: `
+<h2>⚡ 优化清单</h2>
+<ul>
+  <li><strong>延迟加载</strong>：按需加载大型库</li>
+  <li><strong>代码分割</strong>：减小初始加载体积</li>
+  <li><strong>缓存策略</strong>：合理使用 storage 缓存</li>
+  <li><strong>防抖节流</strong>：减少频繁操作</li>
+  <li><strong>Web Worker</strong>：将重计算移到 Worker</li>
+</ul>
+
+<h2>🎯 防抖示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+// 使用
+const handleSearch = debounce((query) => {
+  searchAPI(query);
+}, 300);</div>
+</div>
+
+<h2>📊 性能监控</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">console.time('operation');
+// 你的代码
+console.timeEnd('operation'); // 输出: operation: 123.45ms</div>
+</div>
+    `
+  },
+
+  16: {
+    title: 'Instagram 下载器 - 完整实战',
+    content: `
+<h2>🎯 项目目标</h2>
+<p>构建一个功能完整的 Instagram 下载器，支持图片、视频、Stories 和 Reels 下载。</p>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">📷</div>
+    <div class="feature-title">图片下载</div>
+    <div class="feature-desc">支持单图、多图轮播</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎬</div>
+    <div class="feature-title">视频下载</div>
+    <div class="feature-desc">支持普通视频、Reels</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📖</div>
+    <div class="feature-title">Story 下载</div>
+    <div class="feature-desc">批量下载 Stories</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⚙️</div>
+    <div class="feature-title">高级功能</div>
+    <div class="feature-desc">历史记录、自定义命名</div>
+  </div>
+</div>
+
+<h2>📁 项目结构</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">目录结构</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">instagram-downloader/
+├── manifest.json
+├── background/
+│   ├── index.js
+│   └── download-manager.js
+├── content/
+│   ├── instagram.js
+│   └── styles.css
+├── popup/
+│   ├── popup.html
+│   └── popup.js
+└── assets/
+    └── icons/</div>
+</div>
+
+<h2>🛠️ 核心代码</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - content/instagram.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class MediaDetector {
+  start() {
+    this.detectMedia();
+    this.observeChanges();
+  }
+
+  detectMedia() {
+    // 检测图片
+    const images = document.querySelectorAll('article img');
+    images.forEach(img => this.addDownloadButton(img));
+
+    // 检测视频
+    const videos = document.querySelectorAll('article video');
+    videos.forEach(video => this.addDownloadButton(video));
+  }
+
+  addDownloadButton(element) {
+    const article = element.closest('article');
+    if (!article || article.querySelector('.download-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'download-btn';
+    btn.textContent = '⬇️ 下载';
+    btn.onclick = () => this.download(element.src);
+    
+    article.querySelector('header')?.appendChild(btn);
+  }
+
+  async download(url) {
+    const response = await chrome.runtime.sendMessage({
+      action: 'downloadMedia',
+      url: url
+    });
+    
+    if (response.success) {
+      this.showNotification('下载已开始');
+    }
+  }
+
+  showNotification(message) {
+    const div = document.createElement('div');
+    div.className = 'ig-notification';
+    div.textContent = message;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
+  }
+
+  observeChanges() {
+    new MutationObserver(() => {
+      this.detectMedia();
+    }).observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+}
+
+new MediaDetector().start();</div>
+</div>
+
+<div class="info-card success">
+  <div class="info-card-title">✅ 完成功能</div>
+  <ul>
+    <li>✓ 自动检测页面媒体</li>
+    <li>✓ 添加下载按钮</li>
+    <li>✓ 支持批量下载</li>
+    <li>✓ 下载历史记录</li>
+    <li>✓ 自定义文件命名</li>
+  </ul>
+</div>
+    `
+  },
+
+  17: {
+    title: '发布与维护',
+    content: `
+<h2>📦 发布前准备</h2>
+<div class="info-card warning">
+  <div class="info-card-title">⚠️ 发布检查清单</div>
+  <ul>
+    <li>✓ 完整测试所有功能</li>
+    <li>✓ 检查权限最小化</li>
+    <li>✓ 准备图标和截图</li>
+    <li>✓ 编写清晰描述</li>
+    <li>✓ 准备隐私政策</li>
+  </ul>
+</div>
+
+<h2>🚀 发布流程</h2>
+<ol>
+  <li>注册 Chrome Web Store 开发者账号（$5 费用）</li>
+  <li>打包扩展为 ZIP 文件</li>
+  <li>上传到 Chrome Web Store</li>
+  <li>填写商店信息</li>
+  <li>提交审核（通常 1-3 天）</li>
+</ol>
+
+<h2>📝 版本更新</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">版本号规则</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">版本格式: 主版本.次版本.修订号
+
+1.0.0 -> 首次发布
+1.0.1 -> Bug 修复
+1.1.0 -> 新增功能
+2.0.0 -> 重大更新</div>
+</div>
+
+<h2>🔄 数据迁移</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === 'update') {
+    const oldVer = details.previousVersion;
+    const newVer = chrome.runtime.getManifest().version;
+    
+    console.log(\`从 \${oldVer} 更新到 \${newVer}\`);
+    await migrateData(oldVer, newVer);
+  }
+});</div>
+</div>
+
+<h2>📊 用户反馈</h2>
+<ul>
+  <li><strong>邮件支持</strong>：在描述中提供联系邮箱</li>
+  <li><strong>GitHub Issues</strong>：公开问题追踪</li>
+  <li><strong>更新日志</strong>：详细记录每次更新内容</li>
+  <li><strong>用户调研</strong>：定期收集用户需求</li>
+</ul>
+
+<div class="info-card success">
+  <div class="info-card-title">🎉 恭喜完成！</div>
+  <p>你已经掌握了 Chrome 扩展开发的完整流程！从架构设计、通信机制、UI 开发到性能优化和发布维护。继续实践和创新，构建更多优秀的扩展！</p>
+</div>
+    `
+  }
+};
+
+
+// 添加高级章节内容
+const advancedChapters = {
+  18: {
+    title: 'WebAssembly 集成',
+    content: `
+<h2>🚀 WASM 性能加速</h2>
+<p>使用 WebAssembly 处理计算密集型任务，性能提升 10-100 倍！</p>
+
+<h2>📦 Rust 编译 WASM</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">Rust - lib.rs</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub fn process_image(data: &[u8]) -> Vec<u8> {
+    // 高性能图像处理
+    let mut result = Vec::new();
+    for pixel in data.chunks(4) {
+        // 应用滤镜算法
+        result.extend_from_slice(&apply_filter(pixel));
+    }
+    result
+}
+
+#[wasm_bindgen]
+pub fn hash_password(password: &str) -> String {
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    format!("{:x}", hasher.finalize())
+}</div>
+</div>
+
+<h2>🔧 编译与集成</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">Bash</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"># 安装 wasm-pack
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+# 编译
+wasm-pack build --target web
+
+# 使用
+import init, { process_image } from './pkg/mylib.js';
+await init();
+const result = process_image(imageData);</div>
+</div>
+
+<h2>⚡ 性能对比</h2>
+<table>
+  <thead>
+    <tr><th>任务</th><th>JavaScript</th><th>WebAssembly</th><th>提升</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>图像处理</td><td>850ms</td><td>45ms</td><td>18.9x</td></tr>
+    <tr><td>数据加密</td><td>320ms</td><td>12ms</td><td>26.7x</td></tr>
+    <tr><td>数组排序</td><td>180ms</td><td>8ms</td><td>22.5x</td></tr>
+  </tbody>
+</table>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 适用场景</div>
+  <ul>
+    <li>图像/视频处理</li>
+    <li>加密解密算法</li>
+    <li>大数据计算</li>
+    <li>游戏引擎</li>
+  </ul>
+</div>
+    `
+  },
+
+  19: {
+    title: 'IndexedDB 大数据处理',
+    content: `
+<h2>💾 IndexedDB 封装</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - db.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class Database {
+  constructor(name, version = 1) {
+    this.name = name;
+    this.version = version;
+    this.db = null;
+  }
+
+  async init(schema) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.name, this.version);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve(this.db);
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        
+        // 创建对象仓库
+        Object.entries(schema).forEach(([name, config]) => {
+          if (!db.objectStoreNames.contains(name)) {
+            const store = db.createObjectStore(name, config.key);
+            
+            // 创建索引
+            config.indexes?.forEach(index => {
+              store.createIndex(index.name, index.keyPath, index.options);
+            });
+          }
+        });
+      };
+    });
+  }
+
+  async add(storeName, data) {
+    const tx = this.db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    return new Promise((resolve, reject) => {
+      const request = store.add(data);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAll(storeName, query = null) {
+    const tx = this.db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    
+    return new Promise((resolve, reject) => {
+      const request = query ? store.getAll(query) : store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async query(storeName, indexName, value) {
+    const tx = this.db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const index = store.index(indexName);
+    
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(value);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async bulkAdd(storeName, items) {
+    const tx = this.db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    
+    items.forEach(item => store.add(item));
+    
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+}</div>
+</div>
+
+<h2>🔍 使用示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 初始化数据库
+const db = new Database('MyExtension', 1);
+await db.init({
+  downloads: {
+    key: { keyPath: 'id', autoIncrement: true },
+    indexes: [
+      { name: 'url', keyPath: 'url', options: { unique: false } },
+      { name: 'date', keyPath: 'timestamp', options: { unique: false } }
+    ]
+  },
+  cache: {
+    key: { keyPath: 'key' }
+  }
+});
+
+// 批量插入 10000 条数据
+const items = Array.from({ length: 10000 }, (_, i) => ({
+  url: \`https://example.com/\${i}\`,
+  timestamp: Date.now(),
+  data: generateData()
+}));
+
+await db.bulkAdd('downloads', items); // < 100ms
+
+// 索引查询
+const results = await db.query('downloads', 'date', Date.now());</div>
+</div>
+
+<h2>📊 性能优势</h2>
+<table>
+  <thead>
+    <tr><th>存储方式</th><th>容量</th><th>查询速度</th><th>复杂查询</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>chrome.storage</td><td>10MB</td><td>慢</td><td>❌</td></tr>
+    <tr><td>localStorage</td><td>10MB</td><td>中</td><td>❌</td></tr>
+    <tr><td>IndexedDB</td><td>无限</td><td>快</td><td>✅</td></tr>
+  </tbody>
+</table>
+    `
+  },
+
+  20: {
+    title: 'Service Worker 离线缓存',
+    content: `
+<h2>📦 离线优先策略</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - background.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const CACHE_NAME = 'my-extension-v1';
+const CACHE_URLS = [
+  '/popup.html',
+  '/popup.js',
+  '/styles.css',
+  '/icons/icon128.png'
+];
+
+// 安装时缓存资源
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(CACHE_URLS);
+    })
+  );
+  self.skipWaiting();
+});
+
+// 激活时清理旧缓存
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
+          .map(name => caches.delete(name))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// 拦截请求
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      // 缓存命中，返回缓存
+      if (response) {
+        return response;
+      }
+
+      // 缓存未命中，发起网络请求
+      return fetch(event.request).then((response) => {
+        // 只缓存成功的 GET 请求
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return response;
+      });
+    })
+  );
+});</div>
+</div>
+
+<h2>🎯 缓存策略</h2>
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">⚡</div>
+    <div class="feature-title">Cache First</div>
+    <div class="feature-desc">优先使用缓存，适合静态资源</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🌐</div>
+    <div class="feature-title">Network First</div>
+    <div class="feature-desc">优先网络，适合动态数据</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🔄</div>
+    <div class="feature-title">Stale While Revalidate</div>
+    <div class="feature-desc">返回缓存同时更新，平衡体验</div>
+  </div>
+</div>
+    `
+  },
+
+  21: {
+    title: '代码混淆与反调试',
+    content: `
+<h2>🔐 代码混淆</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - obfuscator.config.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">module.exports = {
+  compact: true,
+  controlFlowFlattening: true,
+  controlFlowFlatteningThreshold: 0.75,
+  deadCodeInjection: true,
+  deadCodeInjectionThreshold: 0.4,
+  debugProtection: true,
+  debugProtectionInterval: 4000,
+  disableConsoleOutput: true,
+  identifierNamesGenerator: 'hexadecimal',
+  renameGlobals: false,
+  rotateStringArray: true,
+  selfDefending: true,
+  stringArray: true,
+  stringArrayEncoding: ['base64'],
+  stringArrayThreshold: 0.75,
+  unicodeEscapeSequence: false
+};</div>
+</div>
+
+<h2>🛡️ 反调试技术</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 检测开发者工具
+(function() {
+  const devtools = /./;
+  devtools.toString = function() {
+    this.opened = true;
+  };
+  
+  setInterval(() => {
+    console.log('%c', devtools);
+    if (devtools.opened) {
+      // 检测到开发者工具
+      debugger;
+      window.close();
+    }
+    devtools.opened = false;
+  }, 1000);
+})();
+
+// 时间差检测
+function detectDebugger() {
+  const start = performance.now();
+  debugger;
+  const end = performance.now();
+  
+  if (end - start > 100) {
+    // 正在调试
+    throw new Error('Debugging detected');
+  }
+}
+
+// 无限 debugger
+setInterval(() => {
+  (function() {
+    return false;
+  }['constructor']('debugger')['call']());
+}, 50);</div>
+</div>
+
+<h2>🔒 关键代码保护</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 环境指纹验证
+const getFingerprint = () => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'top';
+  ctx.font = '14px Arial';
+  ctx.fillText('fingerprint', 2, 2);
+  return canvas.toDataURL().slice(-50);
+};
+
+// 只在正确环境执行
+if (getFingerprint() === EXPECTED_FINGERPRINT) {
+  // 核心业务代码
+  executeCore();
+}</div>
+</div>
+    `
+  },
+
+  22: {
+    title: 'API 加密与签名',
+    content: `
+<h2>🔐 请求签名</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - crypto.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class RequestSigner {
+  constructor(secretKey) {
+    this.secretKey = secretKey;
+  }
+
+  async sign(method, url, body = '') {
+    const timestamp = Date.now();
+    const nonce = this.generateNonce();
+    
+    // 构造签名字符串
+    const signString = [
+      method.toUpperCase(),
+      url,
+      timestamp,
+      nonce,
+      body
+    ].join('\\n');
+
+    // HMAC-SHA256 签名
+    const signature = await this.hmacSHA256(signString, this.secretKey);
+
+    return {
+      timestamp,
+      nonce,
+      signature
+    };
+  }
+
+  generateNonce() {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  async hmacSHA256(message, key) {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(key);
+    const messageData = encoder.encode(message);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+      'HMAC',
+      cryptoKey,
+      messageData
+    );
+
+    return Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+}
+
+// 使用
+const signer = new RequestSigner('your-secret-key');
+const { timestamp, nonce, signature } = await signer.sign(
+  'POST',
+  'https://api.example.com/data',
+  JSON.stringify({ key: 'value' })
+);
+
+fetch('https://api.example.com/data', {
+  method: 'POST',
+  headers: {
+    'X-Timestamp': timestamp,
+    'X-Nonce': nonce,
+    'X-Signature': signature,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ key: 'value' })
+});</div>
+</div>
+
+<h2>🔑 AES 加密</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">async function encryptData(data, key) {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key),
+    'AES-GCM',
+    false,
+    ['encrypt']
+  );
+
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    encoder.encode(data)
+  );
+
+  return {
+    iv: Array.from(iv),
+    data: Array.from(new Uint8Array(encrypted))
+  };
+}</div>
+</div>
+    `
+  },
+
+  23: {
+    title: '逆向工程与反爬虫',
+    content: `
+<h2>🕵️ GraphQL 请求逆向</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 拦截 Instagram GraphQL 请求
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  const [url, options] = args;
+  
+  if (url.includes('/graphql/query')) {
+    console.log('GraphQL Request:', {
+      url,
+      variables: JSON.parse(options.body).variables,
+      doc_id: new URL(url).searchParams.get('doc_id')
+    });
+  }
+  
+  return originalFetch.apply(this, args).then(async (response) => {
+    const clone = response.clone();
+    const data = await clone.json();
+    
+    if (data.data) {
+      console.log('GraphQL Response:', data.data);
+      
+      // 提取媒体 URL
+      extractMediaUrls(data.data);
+    }
+    
+    return response;
+  });
+};
+
+function extractMediaUrls(data) {
+  const urls = [];
+  
+  // 递归查找所有 display_url
+  function traverse(obj) {
+    if (typeof obj !== 'object' || obj === null) return;
+    
+    if (obj.display_url) {
+      urls.push(obj.display_url);
+    }
+    
+    if (obj.video_url) {
+      urls.push(obj.video_url);
+    }
+    
+    Object.values(obj).forEach(traverse);
+  }
+  
+  traverse(data);
+  return urls;
+}</div>
+</div>
+
+<h2>🔓 XHR 拦截</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const originalXHR = window.XMLHttpRequest;
+window.XMLHttpRequest = function() {
+  const xhr = new originalXHR();
+  const originalOpen = xhr.open;
+  const originalSend = xhr.send;
+
+  xhr.open = function(method, url, ...args) {
+    this._url = url;
+    this._method = method;
+    return originalOpen.apply(this, [method, url, ...args]);
+  };
+
+  xhr.send = function(body) {
+    this.addEventListener('load', function() {
+      if (this._url.includes('/api/')) {
+        console.log({
+          method: this._method,
+          url: this._url,
+          status: this.status,
+          response: JSON.parse(this.responseText)
+        });
+      }
+    });
+    return originalSend.apply(this, [body]);
+  };
+
+  return xhr;
+};</div>
+</div>
+
+<h2>🎭 请求头伪造</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const headers = {
+  'User-Agent': navigator.userAgent,
+  'Accept': '*/*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'X-IG-App-ID': '936619743392459',
+  'X-ASBD-ID': '198387',
+  'X-IG-WWW-Claim': 'hmac.AR...',
+  'X-Requested-With': 'XMLHttpRequest',
+  'Referer': 'https://www.instagram.com/',
+  'Origin': 'https://www.instagram.com',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'same-origin'
+};</div>
+</div>
+    `
+  },
+
+  24: {
+    title: '微前端架构',
+    content: `
+<h2>🏗️ 插件系统架构</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - plugin-system.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class PluginSystem {
+  constructor() {
+    this.plugins = new Map();
+    this.hooks = new Map();
+  }
+
+  register(plugin) {
+    if (!plugin.name || !plugin.version) {
+      throw new Error('Plugin must have name and version');
+    }
+
+    this.plugins.set(plugin.name, plugin);
+
+    // 注册插件的钩子
+    plugin.hooks?.forEach(({ name, handler }) => {
+      if (!this.hooks.has(name)) {
+        this.hooks.set(name, []);
+      }
+      this.hooks.get(name).push({
+        plugin: plugin.name,
+        handler
+      });
+    });
+
+    // 调用插件初始化
+    plugin.onLoad?.();
+  }
+
+  unregister(pluginName) {
+    const plugin = this.plugins.get(pluginName);
+    if (!plugin) return;
+
+    // 清理钩子
+    this.hooks.forEach((handlers, hookName) => {
+      this.hooks.set(
+        hookName,
+        handlers.filter(h => h.plugin !== pluginName)
+      );
+    });
+
+    // 调用插件卸载
+    plugin.onUnload?.();
+    this.plugins.delete(pluginName);
+  }
+
+  async callHook(hookName, ...args) {
+    const handlers = this.hooks.get(hookName) || [];
+    const results = [];
+
+    for (const { handler } of handlers) {
+      try {
+        const result = await handler(...args);
+        results.push(result);
+      } catch (error) {
+        console.error(\`Hook \${hookName} error:\`, error);
+      }
+    }
+
+    return results;
+  }
+
+  getPlugin(name) {
+    return this.plugins.get(name);
+  }
+}
+
+// 使用示例
+const system = new PluginSystem();
+
+// 注册插件
+system.register({
+  name: 'theme-switcher',
+  version: '1.0.0',
+  hooks: [
+    {
+      name: 'onPageLoad',
+      handler: async (page) => {
+        console.log('Theme plugin: Page loaded', page);
+        applyTheme();
+      }
+    }
+  ],
+  onLoad() {
+    console.log('Theme plugin loaded');
+  },
+  onUnload() {
+    console.log('Theme plugin unloaded');
+  }
+});
+
+// 调用钩子
+await system.callHook('onPageLoad', { url: window.location.href });</div>
+</div>
+    `
+  },
+
+  25: {
+    title: 'Shadow DOM 隔离',
+    content: `
+<h2>🎭 完全隔离的 UI 组件</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class IsolatedWidget {
+  constructor() {
+    this.container = document.createElement('div');
+    this.container.id = 'my-extension-widget';
+    
+    // 创建 Shadow DOM
+    this.shadow = this.container.attachShadow({ mode: 'closed' });
+    
+    // 注入样式
+    const style = document.createElement('style');
+    style.textContent = \`
+      :host {
+        all: initial;
+        display: block;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 999999;
+      }
+      .widget {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 16px;
+        font-family: -apple-system, sans-serif;
+      }
+      button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    \`;
+    
+    // 注入 HTML
+    const template = document.createElement('div');
+    template.className = 'widget';
+    template.innerHTML = \`
+      <h3>My Widget</h3>
+      <button id="action-btn">Click Me</button>
+    \`;
+    
+    this.shadow.appendChild(style);
+    this.shadow.appendChild(template);
+    
+    // 事件绑定
+    this.shadow.getElementById('action-btn').addEventListener('click', () => {
+      this.handleAction();
+    });
+  }
+
+  mount() {
+    document.body.appendChild(this.container);
+  }
+
+  unmount() {
+    this.container.remove();
+  }
+
+  handleAction() {
+    console.log('Widget action triggered');
+  }
+}
+
+// 使用
+const widget = new IsolatedWidget();
+widget.mount();</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 Shadow DOM 优势</div>
+  <ul>
+    <li>样式完全隔离，不受页面 CSS 影响</li>
+    <li>DOM 结构私有，防止外部访问</li>
+    <li>事件不会冒泡到外部</li>
+    <li>适合制作独立组件</li>
+  </ul>
+</div>
+    `
+  },
+
+  26: {
+    title: '插件化系统设计',
+    content: `
+<h2>🔌 事件驱动架构</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - event-bus.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class EventBus {
+  constructor() {
+    this.events = new Map();
+  }
+
+  on(event, handler, priority = 0) {
+    if (!this.events.has(event)) {
+      this.events.set(event, []);
+    }
+    
+    this.events.get(event).push({ handler, priority });
+    
+    // 按优先级排序
+    this.events.get(event).sort((a, b) => b.priority - a.priority);
+    
+    // 返回取消订阅函数
+    return () => this.off(event, handler);
+  }
+
+  off(event, handler) {
+    if (!this.events.has(event)) return;
+    
+    const handlers = this.events.get(event);
+    const index = handlers.findIndex(h => h.handler === handler);
+    
+    if (index > -1) {
+      handlers.splice(index, 1);
+    }
+  }
+
+  async emit(event, data) {
+    if (!this.events.has(event)) return [];
+    
+    const handlers = this.events.get(event);
+    const results = [];
+    
+    for (const { handler } of handlers) {
+      try {
+        const result = await handler(data);
+        
+        // 如果返回 false，停止传播
+        if (result === false) break;
+        
+        results.push(result);
+      } catch (error) {
+        console.error(\`Event \${event} handler error:\`, error);
+      }
+    }
+    
+    return results;
+  }
+
+  once(event, handler) {
+    const wrappedHandler = (data) => {
+      this.off(event, wrappedHandler);
+      return handler(data);
+    };
+    
+    return this.on(event, wrappedHandler);
+  }
+}
+
+// 全局事件总线
+export const bus = new EventBus();
+
+// 使用示例
+bus.on('download:start', ({ url, filename }) => {
+  console.log(\`Starting download: \${filename}\`);
+}, 10); // 高优先级
+
+bus.on('download:start', ({ url }) => {
+  // 可以取消下载
+  if (url.includes('blocked')) {
+    return false; // 停止后续处理
+  }
+});
+
+await bus.emit('download:start', {
+  url: 'https://example.com/file.zip',
+  filename: 'file.zip'
+});</div>
+</div>
+    `
+  },
+
+  27: {
+    title: 'AI 增强扩展',
+    content: `
+<h2>🤖 集成 AI 模型</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - ai-helper.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class AIHelper {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://api.openai.com/v1';
+  }
+
+  async chat(messages, options = {}) {
+    const response = await fetch(\`\${this.baseURL}/chat/completions\`, {
+      method: 'POST',
+      headers: {
+        'Authorization': \`Bearer \${this.apiKey}\`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: options.model || 'gpt-4',
+        messages,
+        temperature: options.temperature || 0.7,
+        max_tokens: options.maxTokens || 1000
+      })
+    });
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+
+  async summarize(text) {
+    return await this.chat([
+      {
+        role: 'system',
+        content: 'You are a helpful assistant that summarizes text concisely.'
+      },
+      {
+        role: 'user',
+        content: \`Please summarize this text:\\n\\n\${text}\`
+      }
+    ]);
+  }
+
+  async translate(text, targetLang = 'English') {
+    return await this.chat([
+      {
+        role: 'user',
+        content: \`Translate to \${targetLang}:\\n\\n\${text}\`
+      }
+    ]);
+  }
+
+  async analyze(content, task) {
+    return await this.chat([
+      {
+        role: 'system',
+        content: \`You are an expert analyst. Task: \${task}\`
+      },
+      {
+        role: 'user',
+        content
+      }
+    ]);
+  }
+}
+
+// 使用示例
+const ai = new AIHelper('your-api-key');
+
+// 网页摘要
+const pageText = document.body.innerText;
+const summary = await ai.summarize(pageText.slice(0, 4000));
+console.log('Page Summary:', summary);
+
+// 智能翻译
+const selected = window.getSelection().toString();
+const translated = await ai.translate(selected, 'Chinese');
+console.log('Translation:', translated);</div>
+</div>
+
+<h2>🎨 本地 AI 模型</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - local-ai.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 使用 Transformers.js 运行本地模型
+import { pipeline } from '@xenova/transformers';
+
+class LocalAI {
+  async init() {
+    // 文本分类
+    this.classifier = await pipeline(
+      'sentiment-analysis',
+      'Xenova/distilbert-base-uncased-finetuned-sst-2-english'
+    );
+
+    // 文本生成
+    this.generator = await pipeline(
+      'text-generation',
+      'Xenova/gpt2'
+    );
+  }
+
+  async analyzeSentiment(text) {
+    const result = await this.classifier(text);
+    return result[0]; // { label: 'POSITIVE', score: 0.99 }
+  }
+
+  async generate(prompt, maxLength = 50) {
+    const result = await this.generator(prompt, {
+      max_length: maxLength,
+      num_return_sequences: 1
+    });
+    return result[0].generated_text;
+  }
+}
+
+// 完全离线运行！
+const ai = new LocalAI();
+await ai.init();
+
+const sentiment = await ai.analyzeSentiment('I love this product!');
+console.log(sentiment); // { label: 'POSITIVE', score: 0.999 }</div>
+</div>
+    `
+  },
+
+  28: {
+    title: '实时协作扩展',
+    content: `
+<h2>🔄 WebSocket 实时同步</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - sync-engine.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class SyncEngine {
+  constructor(url, roomId) {
+    this.url = url;
+    this.roomId = roomId;
+    this.ws = null;
+    this.listeners = new Map();
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+  }
+
+  connect() {
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket(\`\${this.url}?room=\${this.roomId}\`);
+
+      this.ws.onopen = () => {
+        console.log('Connected to sync server');
+        this.reconnectAttempts = 0;
+        resolve();
+      };
+
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        this.handleMessage(data);
+      };
+
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        reject(error);
+      };
+
+      this.ws.onclose = () => {
+        console.log('Disconnected from sync server');
+        this.attemptReconnect();
+      };
+    });
+  }
+
+  attemptReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('Max reconnect attempts reached');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+
+    console.log(\`Reconnecting in \${delay}ms...\`);
+    setTimeout(() => this.connect(), delay);
+  }
+
+  send(type, payload) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type, payload }));
+    }
+  }
+
+  on(type, handler) {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, []);
+    }
+    this.listeners.get(type).push(handler);
+  }
+
+  handleMessage(data) {
+    const handlers = this.listeners.get(data.type) || [];
+    handlers.forEach(handler => handler(data.payload));
+  }
+
+  disconnect() {
+    this.ws?.close();
+  }
+}
+
+// 使用示例：协同标注
+const sync = new SyncEngine('wss://sync.example.com', 'room-123');
+await sync.connect();
+
+// 监听其他用户的标注
+sync.on('annotation:add', (annotation) => {
+  addAnnotationToPage(annotation);
+});
+
+// 发送自己的标注
+function onAnnotate(annotation) {
+  sync.send('annotation:add', annotation);
+  addAnnotationToPage(annotation);
+}</div>
+</div>
+
+<h2>🔐 端到端加密</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class E2EESync extends SyncEngine {
+  constructor(url, roomId, password) {
+    super(url, roomId);
+    this.password = password;
+    this.key = null;
+  }
+
+  async init() {
+    // 从密码派生加密密钥
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(this.password),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
+
+    this.key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: enc.encode(this.roomId),
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+
+    await this.connect();
+  }
+
+  async send(type, payload) {
+    const encrypted = await this.encrypt(JSON.stringify(payload));
+    super.send(type, encrypted);
+  }
+
+  async encrypt(data) {
+    const enc = new TextEncoder();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      this.key,
+      enc.encode(data)
+    );
+
+    return {
+      iv: Array.from(iv),
+      data: Array.from(new Uint8Array(encrypted))
+    };
+  }
+
+  async decrypt({ iv, data }) {
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: new Uint8Array(iv) },
+      this.key,
+      new Uint8Array(data)
+    );
+
+    return new TextDecoder().decode(decrypted);
+  }
+
+  handleMessage(data) {
+    this.decrypt(data.payload).then(decrypted => {
+      const payload = JSON.parse(decrypted);
+      const handlers = this.listeners.get(data.type) || [];
+      handlers.forEach(handler => handler(payload));
+    });
+  }
+}</div>
+</div>
+    `
+  },
+
+  29: {
+    title: '浏览器自动化',
+    content: `
+<h2>🤖 高级自动化框架</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - automation.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class BrowserAutomation {
+  constructor() {
+    this.tasks = [];
+    this.running = false;
+  }
+
+  // 等待元素出现
+  async waitForElement(selector, timeout = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const element = document.querySelector(selector);
+      if (element) return element;
+      await this.sleep(100);
+    }
+    
+    throw new Error(\`Element \${selector} not found\`);
+  }
+
+  // 等待导航完成
+  async waitForNavigation() {
+    return new Promise(resolve => {
+      if (document.readyState === 'complete') {
+        resolve();
+      } else {
+        window.addEventListener('load', resolve, { once: true });
+      }
+    });
+  }
+
+  // 模拟人类输入
+  async humanType(element, text, { minDelay = 50, maxDelay = 150 } = {}) {
+    element.focus();
+    
+    for (const char of text) {
+      element.value += char;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      const delay = Math.random() * (maxDelay - minDelay) + minDelay;
+      await this.sleep(delay);
+    }
+    
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // 模拟人类点击
+  async humanClick(element, { delay = 100 } = {}) {
+    // 随机偏移点击位置
+    const rect = element.getBoundingClientRect();
+    const x = rect.left + Math.random() * rect.width;
+    const y = rect.top + Math.random() * rect.height;
+
+    // 鼠标移动
+    element.dispatchEvent(new MouseEvent('mouseover', {
+      bubbles: true,
+      clientX: x,
+      clientY: y
+    }));
+
+    await this.sleep(delay);
+
+    // 点击
+    element.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true,
+      clientX: x,
+      clientY: y
+    }));
+
+    await this.sleep(50);
+
+    element.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      clientX: x,
+      clientY: y
+    }));
+
+    element.click();
+  }
+
+  // 滚动到元素
+  async scrollToElement(element, { behavior = 'smooth' } = {}) {
+    element.scrollIntoView({ behavior, block: 'center' });
+    await this.sleep(500);
+  }
+
+  // 截图
+  async screenshot() {
+    return new Promise((resolve) => {
+      chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+        resolve(dataUrl);
+      });
+    });
+  }
+
+  // 执行任务序列
+  async runSequence(tasks) {
+    this.tasks = tasks;
+    this.running = true;
+
+    for (let i = 0; i < tasks.length && this.running; i++) {
+      const task = tasks[i];
+      console.log(\`Executing task \${i + 1}/\${tasks.length}: \${task.name}\`);
+
+      try {
+        await task.execute(this);
+      } catch (error) {
+        console.error(\`Task \${task.name} failed:\`, error);
+        
+        if (task.onError === 'stop') {
+          break;
+        }
+      }
+    }
+
+    this.running = false;
+  }
+
+  stop() {
+    this.running = false;
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// 使用示例：自动登录
+const bot = new BrowserAutomation();
+
+await bot.runSequence([
+  {
+    name: 'Navigate to login',
+    execute: async (bot) => {
+      window.location.href = 'https://example.com/login';
+      await bot.waitForNavigation();
+    }
+  },
+  {
+    name: 'Fill username',
+    execute: async (bot) => {
+      const input = await bot.waitForElement('#username');
+      await bot.humanType(input, 'myusername');
+    }
+  },
+  {
+    name: 'Fill password',
+    execute: async (bot) => {
+      const input = await bot.waitForElement('#password');
+      await bot.humanType(input, 'mypassword');
+    }
+  },
+  {
+    name: 'Submit form',
+    execute: async (bot) => {
+      const button = await bot.waitForElement('button[type="submit"]');
+      await bot.humanClick(button);
+      await bot.sleep(2000);
+    },
+    onError: 'stop'
+  }
+]);</div>
+</div>
+
+<h2>🎯 验证码识别</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">async function solveCaptcha(imageElement) {
+  // 提取图片
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = imageElement.width;
+  canvas.height = imageElement.height;
+  ctx.drawImage(imageElement, 0, 0);
+  
+  const imageData = canvas.toDataURL('image/png').split(',')[1];
+  
+  // 调用 OCR API
+  const response = await fetch('https://api.ocr.space/parse/image', {
+    method: 'POST',
+    headers: {
+      'apikey': 'YOUR_API_KEY'
+    },
+    body: JSON.stringify({
+      base64Image: \`data:image/png;base64,\${imageData}\`,
+      language: 'eng'
+    })
+  });
+  
+  const result = await response.json();
+  return result.ParsedResults[0].ParsedText.trim();
+}</div>
+</div>
+    `
+  },
+
+  30: {
+    title: '商业化与盈利模式',
+    content: `
+<h2>💰 盈利模式</h2>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">💳</div>
+    <div class="feature-title">付费订阅</div>
+    <div class="feature-desc">月费/年费模式，稳定现金流</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎁</div>
+    <div class="feature-title">免费增值</div>
+    <div class="feature-desc">基础免费，高级功能收费</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🏢</div>
+    <div class="feature-title">企业授权</div>
+    <div class="feature-desc">面向企业客户的批量授权</div>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🤝</div>
+    <div class="feature-title">API 服务</div>
+    <div class="feature-desc">将核心能力开放为 API</div>
+  </div>
+</div>
+
+<h2>🔐 授权系统</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - license.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class LicenseManager {
+  constructor() {
+    this.serverURL = 'https://license.yourapp.com';
+  }
+
+  async verify(licenseKey) {
+    const response = await fetch(\`\${this.serverURL}/verify\`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key: licenseKey,
+        fingerprint: await this.getFingerprint()
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.valid) {
+      await chrome.storage.local.set({
+        license: {
+          key: licenseKey,
+          tier: result.tier,
+          expiresAt: result.expiresAt,
+          verifiedAt: Date.now()
+        }
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  async checkLicense() {
+    const { license } = await chrome.storage.local.get('license');
+    
+    if (!license) {
+      return { valid: false, tier: 'free' };
+    }
+
+    // 检查是否过期
+    if (Date.now() > license.expiresAt) {
+      return { valid: false, tier: 'free', reason: 'expired' };
+    }
+
+    // 每7天重新验证一次
+    if (Date.now() - license.verifiedAt > 7 * 24 * 60 * 60 * 1000) {
+      const valid = await this.verify(license.key);
+      if (!valid) {
+        return { valid: false, tier: 'free', reason: 'invalid' };
+      }
+    }
+
+    return { valid: true, tier: license.tier };
+  }
+
+  async getFingerprint() {
+    const data = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width,
+      screen.height,
+      new Date().getTimezoneOffset()
+    ].join('|');
+
+    const encoder = new TextEncoder();
+    const buffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+    return Array.from(new Uint8Array(buffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+}
+
+// 使用
+const license = new LicenseManager();
+const status = await license.checkLicense();
+
+if (status.tier === 'pro') {
+  // 启用专业版功能
+  enableProFeatures();
+} else {
+  // 显示升级提示
+  showUpgradePrompt();
+}</div>
+</div>
+
+<h2>📊 数据分析</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - analytics.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class Analytics {
+  constructor(trackingId) {
+    this.trackingId = trackingId;
+    this.endpoint = 'https://analytics.yourapp.com/collect';
+  }
+
+  async track(event, properties = {}) {
+    const payload = {
+      tracking_id: this.trackingId,
+      event,
+      properties: {
+        ...properties,
+        timestamp: Date.now(),
+        user_agent: navigator.userAgent,
+        extension_version: chrome.runtime.getManifest().version
+      }
+    };
+
+    // 使用 sendBeacon 确保数据发送
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(
+        this.endpoint,
+        JSON.stringify(payload)
+      );
+    } else {
+      fetch(this.endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
+    }
+  }
+
+  // 自动追踪常见事件
+  autoTrack() {
+    // 安装
+    chrome.runtime.onInstalled.addListener((details) => {
+      if (details.reason === 'install') {
+        this.track('extension_installed');
+      } else if (details.reason === 'update') {
+        this.track('extension_updated', {
+          previous_version: details.previousVersion
+        });
+      }
+    });
+
+    // 使用
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.action) {
+        this.track(\`action_\${msg.action}\`);
+      }
+    });
+  }
+}
+
+// 初始化
+const analytics = new Analytics('YOUR_TRACKING_ID');
+analytics.autoTrack();
+
+// 追踪自定义事件
+analytics.track('download_clicked', {
+  url: 'https://example.com/file.zip',
+  size: 1024000
+});</div>
+</div>
+
+<h2>💡 营销策略</h2>
+<ul>
+  <li><strong>口碑营销</strong>：提供免费版，让用户自发传播</li>
+  <li><strong>内容营销</strong>：发布教程、案例研究</li>
+  <li><strong>SEO 优化</strong>：优化 Chrome Web Store 列表</li>
+  <li><strong>社交媒体</strong>：Twitter、Reddit、Product Hunt</li>
+  <li><strong>联盟营销</strong>：提供推荐奖励</li>
+  <li><strong>付费广告</strong>：Google Ads、Facebook Ads</li>
+</ul>
+
+<h2>📈 增长指标</h2>
+<table>
+  <thead>
+    <tr><th>指标</th><th>目标</th><th>优化方向</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>DAU/MAU</td><td>>30%</td><td>提高用户活跃度</td></tr>
+    <tr><td>留存率</td><td>>40%</td><td>优化核心功能</td></tr>
+    <tr><td>转化率</td><td>>5%</td><td>改进付费流程</td></tr>
+    <tr><td>LTV/CAC</td><td>>3:1</td><td>降低获客成本</td></tr>
+  </tbody>
+</table>
+
+<div class="info-card success">
+  <div class="info-card-title">🎉 完整课程结束！</div>
+  <p>恭喜你完成从基础到高级的全部学习！你现在已经掌握：</p>
+  <ul>
+    <li>✅ Chrome 扩展完整架构</li>
+    <li>✅ React + 现代前端开发</li>
+    <li>✅ WebAssembly 性能优化</li>
+    <li>✅ 安全加密与反逆向</li>
+    <li>✅ AI 集成与自动化</li>
+    <li>✅ 商业化盈利模式</li>
+  </ul>
+  <p>现在开始构建你的商业级 Chrome 扩展吧！🚀</p>
+</div>
+    `
+  }
+};
+
+// 合并到 chapters 对象
+Object.assign(chapters, advancedChapters);
+
+
+
+// 添加基础章节内容
+const foundationChapters = {
+  '-5': {
+    title: 'HTML 基础入门',
+    content: `
+<h2>📄 HTML 是什么？</h2>
+<p>HTML（HyperText Markup Language）是网页的骨架，用标签来组织内容结构。</p>
+
+<h2>🏗️ 基本结构</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的第一个网页</title>
+</head>
+<body>
+  <h1>欢迎学习 HTML</h1>
+  <p>这是一个段落。</p>
+</body>
+</html></div>
+</div>
+
+<h2>🔤 常用标签</h2>
+<table>
+  <thead>
+    <tr><th>标签</th><th>作用</th><th>示例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>&lt;h1&gt;-&lt;h6&gt;</td><td>标题</td><td>&lt;h1&gt;一级标题&lt;/h1&gt;</td></tr>
+    <tr><td>&lt;p&gt;</td><td>段落</td><td>&lt;p&gt;这是段落&lt;/p&gt;</td></tr>
+    <tr><td>&lt;a&gt;</td><td>链接</td><td>&lt;a href="url"&gt;链接&lt;/a&gt;</td></tr>
+    <tr><td>&lt;img&gt;</td><td>图片</td><td>&lt;img src="url" alt="描述"&gt;</td></tr>
+    <tr><td>&lt;div&gt;</td><td>容器</td><td>&lt;div&gt;内容&lt;/div&gt;</td></tr>
+    <tr><td>&lt;span&gt;</td><td>行内容器</td><td>&lt;span&gt;文本&lt;/span&gt;</td></tr>
+    <tr><td>&lt;ul&gt;/&lt;ol&gt;</td><td>列表</td><td>&lt;ul&gt;&lt;li&gt;项目&lt;/li&gt;&lt;/ul&gt;</td></tr>
+    <tr><td>&lt;button&gt;</td><td>按钮</td><td>&lt;button&gt;点击&lt;/button&gt;</td></tr>
+  </tbody>
+</table>
+
+<h2>📝 表单元素</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><form action="/submit" method="POST">
+  <!-- 文本输入 -->
+  <input type="text" name="username" placeholder="用户名">
+  
+  <!-- 密码输入 -->
+  <input type="password" name="password" placeholder="密码">
+  
+  <!-- 邮箱 -->
+  <input type="email" name="email" placeholder="邮箱">
+  
+  <!-- 多选框 -->
+  <input type="checkbox" name="agree" id="agree">
+  <label for="agree">我同意条款</label>
+  
+  <!-- 单选框 -->
+  <input type="radio" name="gender" value="male" id="male">
+  <label for="male">男</label>
+  <input type="radio" name="gender" value="female" id="female">
+  <label for="female">女</label>
+  
+  <!-- 下拉选择 -->
+  <select name="city">
+    <option value="beijing">北京</option>
+    <option value="shanghai">上海</option>
+  </select>
+  
+  <!-- 多行文本 -->
+  <textarea name="message" rows="4" cols="50"></textarea>
+  
+  <!-- 提交按钮 -->
+  <button type="submit">提交</button>
+</form></div>
+</div>
+
+<h2>🎯 语义化标签</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><header>
+  <nav>
+    <a href="#home">首页</a>
+    <a href="#about">关于</a>
+  </nav>
+</header>
+
+<main>
+  <article>
+    <h2>文章标题</h2>
+    <p>文章内容...</p>
+  </article>
+  
+  <aside>
+    <h3>侧边栏</h3>
+    <p>相关内容...</p>
+  </aside>
+</main>
+
+<footer>
+  <p>&copy; 2026 版权所有</p>
+</footer></div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 最佳实践</div>
+  <ul>
+    <li>使用语义化标签，提高可读性</li>
+    <li>图片必须有 alt 属性</li>
+    <li>表单元素使用 label 关联</li>
+    <li>合理使用 id 和 class</li>
+  </ul>
+</div>
+    `
+  },
+
+  '-4': {
+    title: 'CSS 样式设计',
+    content: `
+<h2>🎨 CSS 是什么？</h2>
+<p>CSS（Cascading Style Sheets）层叠样式表，用来美化网页外观。</p>
+
+<h2>📝 三种引入方式</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML - 内联样式</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><p style="color: red; font-size: 18px;">红色文字</p></div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML - 内部样式</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><head>
+  <style>
+    p {
+      color: blue;
+      font-size: 16px;
+    }
+  </style>
+</head></div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">HTML - 外部样式</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content"><head>
+  <link rel="stylesheet" href="style.css">
+</head></div>
+</div>
+
+<h2>🎯 选择器</h2>
+<table>
+  <thead>
+    <tr><th>选择器</th><th>语法</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>元素选择器</td><td>p { }</td><td>选择所有 &lt;p&gt;</td></tr>
+    <tr><td>类选择器</td><td>.class { }</td><td>选择 class="class"</td></tr>
+    <tr><td>ID选择器</td><td>#id { }</td><td>选择 id="id"</td></tr>
+    <tr><td>后代选择器</td><td>div p { }</td><td>div 内的所有 p</td></tr>
+    <tr><td>子选择器</td><td>div > p { }</td><td>div 的直接子元素 p</td></tr>
+    <tr><td>伪类</td><td>a:hover { }</td><td>鼠标悬停状态</td></tr>
+  </tbody>
+</table>
+
+<h2>🎨 常用样式</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">CSS</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">/* 文本样式 */
+.text {
+  color: #333;              /* 文字颜色 */
+  font-size: 16px;          /* 字体大小 */
+  font-weight: bold;        /* 字体粗细 */
+  text-align: center;       /* 文字对齐 */
+  line-height: 1.5;         /* 行高 */
+  letter-spacing: 2px;      /* 字间距 */
+}
+
+/* 背景样式 */
+.box {
+  background-color: #f0f0f0;
+  background-image: url('bg.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* 边框 */
+.border {
+  border: 2px solid #ccc;
+  border-radius: 8px;       /* 圆角 */
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* 间距 */
+.spacing {
+  margin: 20px;             /* 外边距 */
+  padding: 15px;            /* 内边距 */
+}
+
+/* 尺寸 */
+.size {
+  width: 300px;
+  height: 200px;
+  max-width: 100%;
+}</div>
+</div>
+
+<h2>📦 布局 - Flexbox</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">CSS</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">.container {
+  display: flex;
+  justify-content: center;    /* 水平居中 */
+  align-items: center;        /* 垂直居中 */
+  gap: 20px;                  /* 子元素间距 */
+}
+
+/* 常用值 */
+justify-content: flex-start | center | flex-end | space-between;
+align-items: flex-start | center | flex-end | stretch;
+flex-direction: row | column;</div>
+</div>
+
+<h2>🎯 布局 - Grid</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">CSS</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);  /* 3列等宽 */
+  grid-gap: 20px;                         /* 网格间距 */
+}
+
+/* 响应式网格 */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}</div>
+</div>
+
+<h2>📱 响应式设计</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">CSS</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">/* 手机端 */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    padding: 10px;
+  }
+}
+
+/* 平板端 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding: 20px;
+  }
+}
+
+/* 桌面端 */
+@media (min-width: 1025px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}</div>
+</div>
+
+<h2>✨ 动画效果</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">CSS</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">/* 过渡 */
+.button {
+  background: blue;
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background: darkblue;
+  transform: scale(1.1);
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 CSS 技巧</div>
+  <ul>
+    <li>使用 CSS 变量管理颜色</li>
+    <li>Flexbox 用于一维布局，Grid 用于二维布局</li>
+    <li>移动端优先设计（Mobile First）</li>
+    <li>使用 rem/em 而非 px 实现响应式</li>
+  </ul>
+</div>
+    `
+  },
+
+  '-3': {
+    title: 'JavaScript 基础',
+    content: `
+<h2>⚡ JavaScript 是什么？</h2>
+<p>JavaScript 是网页的"大脑"，让网页具有交互性和动态功能。</p>
+
+<h2>📝 变量声明</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// let - 可变变量（推荐）
+let name = 'John';
+name = 'Jane';  // 可以修改
+
+// const - 常量（推荐）
+const PI = 3.14159;
+// PI = 3.14;  // 报错！不能修改
+
+// var - 旧写法（不推荐）
+var age = 25;</div>
+</div>
+
+<h2>📊 数据类型</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 基本类型
+const str = 'Hello';           // 字符串
+const num = 42;                // 数字
+const bool = true;             // 布尔值
+const nothing = null;          // 空值
+const undef = undefined;       // 未定义
+
+// 引用类型
+const arr = [1, 2, 3];         // 数组
+const obj = { name: 'John' };  // 对象
+const func = function() {};    // 函数
+
+// 类型检测
+console.log(typeof str);       // "string"
+console.log(Array.isArray(arr)); // true</div>
+</div>
+
+<h2>🔢 运算符</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 算术运算
+const sum = 10 + 5;      // 15
+const diff = 10 - 5;     // 5
+const product = 10 * 5;  // 50
+const quotient = 10 / 5; // 2
+const remainder = 10 % 3; // 1
+
+// 比较运算
+10 == '10'   // true  (值相等)
+10 === '10'  // false (值和类型都要相等，推荐)
+10 != '10'   // false
+10 !== '10'  // true
+10 > 5       // true
+10 <= 10     // true
+
+// 逻辑运算
+true && false  // false (与)
+true || false  // true  (或)
+!true          // false (非)</div>
+</div>
+
+<h2>🔀 条件语句</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// if...else
+const age = 18;
+if (age >= 18) {
+  console.log('成年人');
+} else if (age >= 13) {
+  console.log('青少年');
+} else {
+  console.log('儿童');
+}
+
+// 三元运算符
+const status = age >= 18 ? '成年' : '未成年';
+
+// switch
+const day = 'Monday';
+switch (day) {
+  case 'Monday':
+    console.log('星期一');
+    break;
+  case 'Tuesday':
+    console.log('星期二');
+    break;
+  default:
+    console.log('其他');
+}</div>
+</div>
+
+<h2>🔁 循环</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// for 循环
+for (let i = 0; i < 5; i++) {
+  console.log(i);  // 0, 1, 2, 3, 4
+}
+
+// while 循环
+let count = 0;
+while (count < 5) {
+  console.log(count);
+  count++;
+}
+
+// 数组遍历
+const fruits = ['apple', 'banana', 'orange'];
+
+// for...of (推荐)
+for (const fruit of fruits) {
+  console.log(fruit);
+}
+
+// forEach
+fruits.forEach((fruit, index) => {
+  console.log(\`\${index}: \${fruit}\`);
+});
+
+// 对象遍历
+const person = { name: 'John', age: 30 };
+for (const key in person) {
+  console.log(\`\${key}: \${person[key]}\`);
+}</div>
+</div>
+
+<h2>🎯 函数</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 函数声明
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+// 函数表达式
+const add = function(a, b) {
+  return a + b;
+};
+
+// 箭头函数（推荐）
+const multiply = (a, b) => a * b;
+
+// 默认参数
+const greetWithDefault = (name = 'Guest') => {
+  return \`Hello, \${name}!\`;
+};
+
+// 剩余参数
+const sum = (...numbers) => {
+  return numbers.reduce((total, num) => total + num, 0);
+};
+
+console.log(sum(1, 2, 3, 4)); // 10</div>
+</div>
+
+<h2>📦 数组方法</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const numbers = [1, 2, 3, 4, 5];
+
+// map - 映射（返回新数组）
+const doubled = numbers.map(n => n * 2);
+// [2, 4, 6, 8, 10]
+
+// filter - 过滤
+const evens = numbers.filter(n => n % 2 === 0);
+// [2, 4]
+
+// find - 查找
+const found = numbers.find(n => n > 3);
+// 4
+
+// reduce - 归约
+const sum = numbers.reduce((total, n) => total + n, 0);
+// 15
+
+// 其他常用方法
+numbers.push(6);        // 末尾添加
+numbers.pop();          // 末尾删除
+numbers.unshift(0);     // 开头添加
+numbers.shift();        // 开头删除
+numbers.includes(3);    // 是否包含
+numbers.indexOf(3);     // 查找索引</div>
+</div>
+
+<h2>🗂️ 对象</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 创建对象
+const person = {
+  name: 'John',
+  age: 30,
+  greet() {
+    console.log(\`Hello, I'm \${this.name}\`);
+  }
+};
+
+// 访问属性
+console.log(person.name);      // 点语法
+console.log(person['age']);    // 方括号语法
+
+// 添加/修改属性
+person.email = 'john@example.com';
+person.age = 31;
+
+// 删除属性
+delete person.email;
+
+// 对象解构
+const { name, age } = person;
+
+// 对象方法
+Object.keys(person);    // ['name', 'age', 'greet']
+Object.values(person);  // ['John', 31, function]
+Object.entries(person); // [['name', 'John'], ...]</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 学习建议</div>
+  <ul>
+    <li>多写代码，在控制台测试</li>
+    <li>优先使用 const，需要修改时用 let</li>
+    <li>使用严格相等 === 而非 ==</li>
+    <li>掌握数组方法，写出更优雅的代码</li>
+  </ul>
+</div>
+    `
+  },
+
+  '-2': {
+    title: 'DOM 操作与事件',
+    content: `
+<h2>🌳 DOM 是什么？</h2>
+<p>DOM（Document Object Model）文档对象模型，是 HTML 的编程接口，让我们可以用 JavaScript 操作网页。</p>
+
+<h2>🔍 选择元素</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 通过 ID 选择（返回单个元素）
+const header = document.getElementById('header');
+
+// 通过类名选择（返回 HTMLCollection）
+const buttons = document.getElementsByClassName('btn');
+
+// 通过标签名选择
+const paragraphs = document.getElementsByTagName('p');
+
+// CSS 选择器（推荐）
+const firstButton = document.querySelector('.btn');      // 第一个匹配
+const allButtons = document.querySelectorAll('.btn');    // 所有匹配
+
+// 复杂选择器
+const nestedElement = document.querySelector('#header .title');
+const specificButton = document.querySelector('button[type="submit"]');</div>
+</div>
+
+<h2>✏️ 修改内容</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const element = document.querySelector('#myElement');
+
+// 修改文本内容
+element.textContent = '新文本';
+element.innerText = '新文本';
+
+// 修改 HTML 内容
+element.innerHTML = '<strong>加粗文本</strong>';
+
+// 修改属性
+element.setAttribute('data-id', '123');
+element.getAttribute('data-id');  // '123'
+element.removeAttribute('data-id');
+
+// 常用属性直接访问
+element.id = 'newId';
+element.className = 'new-class';
+element.href = 'https://example.com';  // 链接
+element.src = 'image.jpg';             // 图片</div>
+</div>
+
+<h2>🎨 修改样式</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const box = document.querySelector('.box');
+
+// 直接修改样式（驼峰命名）
+box.style.color = 'red';
+box.style.backgroundColor = '#f0f0f0';
+box.style.fontSize = '18px';
+
+// 修改 CSS 类
+box.classList.add('active');         // 添加类
+box.classList.remove('active');      // 移除类
+box.classList.toggle('active');      // 切换类
+box.classList.contains('active');    // 检查是否有类
+
+// 替换所有类
+box.className = 'new-class another-class';</div>
+</div>
+
+<h2>➕ 创建和删除元素</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 创建元素
+const newDiv = document.createElement('div');
+newDiv.textContent = 'Hello';
+newDiv.className = 'my-div';
+
+// 添加到页面
+const container = document.querySelector('#container');
+container.appendChild(newDiv);           // 末尾添加
+container.prepend(newDiv);               // 开头添加
+container.insertBefore(newDiv, child);   // 插入到某元素前
+
+// 删除元素
+newDiv.remove();                         // 删除自己
+container.removeChild(newDiv);           // 父元素删除子元素
+
+// 克隆元素
+const clone = newDiv.cloneNode(true);    // true 表示深拷贝</div>
+</div>
+
+<h2>🖱️ 事件监听</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const button = document.querySelector('#myButton');
+
+// 添加事件监听（推荐）
+button.addEventListener('click', function(event) {
+  console.log('按钮被点击了！');
+  console.log('事件对象:', event);
+});
+
+// 箭头函数写法
+button.addEventListener('click', (e) => {
+  console.log('点击位置:', e.clientX, e.clientY);
+});
+
+// 移除事件监听
+function handleClick() {
+  console.log('Clicked!');
+}
+button.addEventListener('click', handleClick);
+button.removeEventListener('click', handleClick);
+
+// 事件选项
+button.addEventListener('click', handler, {
+  once: true,      // 只触发一次
+  capture: true,   // 捕获阶段触发
+  passive: true    // 不会调用 preventDefault
+});</div>
+</div>
+
+<h2>📋 常用事件类型</h2>
+<table>
+  <thead>
+    <tr><th>事件</th><th>触发时机</th><th>示例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>click</td><td>点击</td><td>按钮点击</td></tr>
+    <tr><td>dblclick</td><td>双击</td><td>双击打开</td></tr>
+    <tr><td>input</td><td>输入变化</td><td>输入框实时搜索</td></tr>
+    <tr><td>change</td><td>值改变</td><td>下拉框选择</td></tr>
+    <tr><td>submit</td><td>表单提交</td><td>登录表单</td></tr>
+    <tr><td>keydown</td><td>按键按下</td><td>快捷键</td></tr>
+    <tr><td>keyup</td><td>按键释放</td><td>输入完成</td></tr>
+    <tr><td>mouseenter</td><td>鼠标进入</td><td>显示提示</td></tr>
+    <tr><td>mouseleave</td><td>鼠标离开</td><td>隐藏提示</td></tr>
+    <tr><td>scroll</td><td>滚动</td><td>滚动加载</td></tr>
+    <tr><td>load</td><td>加载完成</td><td>图片加载</td></tr>
+  </tbody>
+</table>
+
+<h2>🎯 事件对象</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">document.addEventListener('click', (event) => {
+  // 阻止默认行为
+  event.preventDefault();
+  
+  // 阻止事件冒泡
+  event.stopPropagation();
+  
+  // 事件目标
+  console.log(event.target);           // 触发事件的元素
+  console.log(event.currentTarget);    // 绑定事件的元素
+  
+  // 鼠标位置
+  console.log(event.clientX, event.clientY);  // 相对视口
+  console.log(event.pageX, event.pageY);      // 相对页面
+  
+  // 键盘事件
+  console.log(event.key);              // 按键名称
+  console.log(event.ctrlKey);          // 是否按下 Ctrl
+  console.log(event.shiftKey);         // 是否按下 Shift
+});</div>
+</div>
+
+<h2>🔥 实战示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 待办列表</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// HTML:
+// <input id="todoInput" type="text">
+// <button id="addBtn">添加</button>
+// <ul id="todoList"></ul>
+
+const input = document.querySelector('#todoInput');
+const addBtn = document.querySelector('#addBtn');
+const list = document.querySelector('#todoList');
+
+addBtn.addEventListener('click', () => {
+  const text = input.value.trim();
+  if (!text) return;
+  
+  // 创建列表项
+  const li = document.createElement('li');
+  li.textContent = text;
+  
+  // 创建删除按钮
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = '删除';
+  deleteBtn.addEventListener('click', () => {
+    li.remove();
+  });
+  
+  li.appendChild(deleteBtn);
+  list.appendChild(li);
+  
+  // 清空输入框
+  input.value = '';
+});
+
+// 回车添加
+input.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    addBtn.click();
+  }
+});</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 最佳实践</div>
+  <ul>
+    <li>使用事件委托减少内存占用</li>
+    <li>避免在循环中频繁操作 DOM</li>
+    <li>使用 DocumentFragment 批量添加元素</li>
+    <li>移除事件监听避免内存泄漏</li>
+  </ul>
+</div>
+    `
+  },
+
+  '-1': {
+    title: 'ES6+ 现代语法',
+    content: `
+<h2>🚀 模板字符串</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const name = 'John';
+const age = 30;
+
+// 旧写法
+const msg1 = 'Hello, ' + name + '! You are ' + age + ' years old.';
+
+// ES6 模板字符串（推荐）
+const msg2 = \`Hello, \${name}! You are \${age} years old.\`;
+
+// 支持表达式
+const msg3 = \`明年你 \${age + 1} 岁\`;
+
+// 多行字符串
+const html = \`
+  <div class="card">
+    <h2>\${name}</h2>
+    <p>Age: \${age}</p>
+  </div>
+\`;</div>
+</div>
+
+<h2>📦 解构赋值</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 数组解构
+const colors = ['red', 'green', 'blue'];
+const [first, second, third] = colors;
+console.log(first);  // 'red'
+
+// 跳过元素
+const [, , last] = colors;
+console.log(last);  // 'blue'
+
+// 剩余元素
+const [head, ...rest] = colors;
+console.log(rest);  // ['green', 'blue']
+
+// 对象解构
+const person = { name: 'John', age: 30, city: 'NYC' };
+const { name, age } = person;
+
+// 重命名
+const { name: userName, age: userAge } = person;
+
+// 默认值
+const { country = 'USA' } = person;
+
+// 嵌套解构
+const user = {
+  id: 1,
+  profile: {
+    name: 'John',
+    email: 'john@example.com'
+  }
+};
+const { profile: { name, email } } = user;</div>
+</div>
+
+<h2>⚡ 箭头函数</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 普通函数
+function add(a, b) {
+  return a + b;
+}
+
+// 箭头函数
+const add = (a, b) => a + b;
+
+// 单参数可省略括号
+const double = n => n * 2;
+
+// 多行需要花括号和 return
+const complexFunc = (x, y) => {
+  const result = x * y;
+  return result + 10;
+};
+
+// 返回对象需要括号
+const makeUser = (name, age) => ({ name, age });
+
+// 箭头函数没有自己的 this
+const obj = {
+  name: 'Object',
+  regularFunc: function() {
+    console.log(this.name);  // 'Object'
+  },
+  arrowFunc: () => {
+    console.log(this.name);  // undefined (继承外层 this)
+  }
+};</div>
+</div>
+
+<h2>📤 展开运算符</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 数组展开
+const arr1 = [1, 2, 3];
+const arr2 = [4, 5, 6];
+const combined = [...arr1, ...arr2];  // [1, 2, 3, 4, 5, 6]
+
+// 数组复制
+const copy = [...arr1];
+
+// 对象展开
+const obj1 = { a: 1, b: 2 };
+const obj2 = { c: 3, d: 4 };
+const merged = { ...obj1, ...obj2 };  // { a: 1, b: 2, c: 3, d: 4 }
+
+// 对象复制和修改
+const user = { name: 'John', age: 30 };
+const updated = { ...user, age: 31 };  // { name: 'John', age: 31 }
+
+// 函数参数
+const numbers = [5, 2, 8, 1];
+Math.max(...numbers);  // 8</div>
+</div>
+
+<h2>🔄 数组高级方法</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const users = [
+  { id: 1, name: 'John', age: 30 },
+  { id: 2, name: 'Jane', age: 25 },
+  { id: 3, name: 'Bob', age: 35 }
+];
+
+// some - 是否存在满足条件的元素
+const hasAdult = users.some(user => user.age >= 18);  // true
+
+// every - 是否所有元素都满足条件
+const allAdults = users.every(user => user.age >= 18);  // true
+
+// find - 查找第一个满足条件的元素
+const john = users.find(user => user.name === 'John');
+
+// findIndex - 查找索引
+const index = users.findIndex(user => user.name === 'John');  // 0
+
+// flatMap - 映射后扁平化
+const numbers = [1, 2, 3];
+const doubled = numbers.flatMap(n => [n, n * 2]);
+// [1, 2, 2, 4, 3, 6]
+
+// Array.from - 从可迭代对象创建数组
+const range = Array.from({ length: 5 }, (_, i) => i + 1);
+// [1, 2, 3, 4, 5]</div>
+</div>
+
+<h2>🎯 对象简写</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const name = 'John';
+const age = 30;
+
+// 属性简写
+const user = { name, age };  
+// 等价于 { name: name, age: age }
+
+// 方法简写
+const obj = {
+  // 旧写法
+  sayHello: function() {
+    console.log('Hello');
+  },
+  // 新写法
+  sayHi() {
+    console.log('Hi');
+  }
+};
+
+// 计算属性名
+const key = 'dynamic';
+const obj2 = {
+  [key]: 'value',
+  [\`\${key}2\`]: 'value2'
+};
+// { dynamic: 'value', dynamic2: 'value2' }</div>
+</div>
+
+<h2>🔗 可选链</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">const user = {
+  profile: {
+    name: 'John'
+  }
+};
+
+// 旧写法
+const email = user && user.profile && user.profile.email;
+
+// 可选链（推荐）
+const email = user?.profile?.email;  // undefined
+
+// 数组和函数调用
+const firstItem = arr?.[0];
+const result = func?.();
+
+// 空值合并运算符
+const name = user?.name ?? 'Anonymous';  // 只在 null/undefined 时使用默认值
+const count = 0 ?? 10;  // 0（|| 会返回 10）</div>
+</div>
+
+<h2>📦 模块化</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - utils.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 导出
+export const PI = 3.14159;
+
+export function add(a, b) {
+  return a + b;
+}
+
+export class Calculator {
+  // ...
+}
+
+// 默认导出
+export default function multiply(a, b) {
+  return a * b;
+}</div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - main.js</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 导入
+import multiply from './utils.js';  // 默认导出
+import { PI, add, Calculator } from './utils.js';  // 命名导出
+
+// 导入所有
+import * as utils from './utils.js';
+console.log(utils.PI);
+
+// 重命名
+import { add as sum } from './utils.js';</div>
+</div>
+
+<div class="info-card tip">
+  <div class="info-card-title">💡 现代 JS 特性</div>
+  <ul>
+    <li>优先使用模板字符串、箭头函数</li>
+    <li>善用解构赋值简化代码</li>
+    <li>使用可选链避免 undefined 错误</li>
+    <li>使用模块化组织代码</li>
+  </ul>
+</div>
+    `
+  },
+
+  '0': {
+    title: '异步编程与 Fetch',
+    content: `
+<h2>⏱️ 什么是异步？</h2>
+<p>异步操作不会阻塞代码执行，适合处理耗时任务（网络请求、文件读取等）。</p>
+
+<h2>📞 回调函数（Callback）</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// setTimeout 是异步的
+console.log('开始');
+
+setTimeout(() => {
+  console.log('2秒后执行');
+}, 2000);
+
+console.log('结束');
+
+// 输出顺序：开始 -> 结束 -> 2秒后执行
+
+// 回调地狱问题
+getData(function(a) {
+  getMoreData(a, function(b) {
+    getMoreData(b, function(c) {
+      // 嵌套太深，难以维护
+    });
+  });
+});</div>
+</div>
+
+<h2>🎁 Promise</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 创建 Promise
+const promise = new Promise((resolve, reject) => {
+  // 异步操作
+  setTimeout(() => {
+    const success = true;
+    if (success) {
+      resolve('成功的数据');
+    } else {
+      reject('失败原因');
+    }
+  }, 1000);
+});
+
+// 使用 Promise
+promise
+  .then(data => {
+    console.log('成功:', data);
+    return '下一步数据';
+  })
+  .then(data => {
+    console.log('继续:', data);
+  })
+  .catch(error => {
+    console.error('失败:', error);
+  })
+  .finally(() => {
+    console.log('无论成功失败都执行');
+  });
+
+// Promise 链式调用
+fetchUser()
+  .then(user => fetchPosts(user.id))
+  .then(posts => displayPosts(posts))
+  .catch(error => console.error(error));</div>
+</div>
+
+<h2>✨ async/await（推荐）</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// async 函数总是返回 Promise
+async function fetchData() {
+  try {
+    // await 等待 Promise 完成
+    const response = await fetch('https://api.example.com/data');
+    const data = await response.json();
+    console.log(data);
+    return data;
+  } catch (error) {
+    console.error('错误:', error);
+  }
+}
+
+// 调用
+fetchData();
+
+// 或使用 .then
+fetchData().then(data => {
+  console.log('获取到数据:', data);
+});
+
+// 并行请求
+async function fetchMultiple() {
+  const [users, posts, comments] = await Promise.all([
+    fetch('/api/users').then(r => r.json()),
+    fetch('/api/posts').then(r => r.json()),
+    fetch('/api/comments').then(r => r.json())
+  ]);
+  
+  return { users, posts, comments };
+}</div>
+</div>
+
+<h2>🌐 Fetch API</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - GET 请求</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// 基本 GET 请求
+async function getUsers() {
+  const response = await fetch('https://api.example.com/users');
+  
+  // 检查响应状态
+  if (!response.ok) {
+    throw new Error(\`HTTP error! status: \${response.status}\`);
+  }
+  
+  const data = await response.json();
+  return data;
+}
+
+// 带查询参数
+const params = new URLSearchParams({
+  page: 1,
+  limit: 10,
+  sort: 'name'
+});
+
+fetch(\`https://api.example.com/users?\${params}\`)
+  .then(response => response.json())
+  .then(data => console.log(data));</div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - POST 请求</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// POST 创建资源
+async function createUser(userData) {
+  const response = await fetch('https://api.example.com/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer your-token'
+    },
+    body: JSON.stringify(userData)
+  });
+  
+  const data = await response.json();
+  return data;
+}
+
+// 使用
+createUser({
+  name: 'John',
+  email: 'john@example.com'
+});</div>
+</div>
+
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - 其他请求方法</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// PUT - 更新资源
+async function updateUser(id, userData) {
+  return await fetch(\`https://api.example.com/users/\${id}\`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
+}
+
+// PATCH - 部分更新
+async function patchUser(id, updates) {
+  return await fetch(\`https://api.example.com/users/\${id}\`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+}
+
+// DELETE - 删除资源
+async function deleteUser(id) {
+  return await fetch(\`https://api.example.com/users/\${id}\`, {
+    method: 'DELETE'
+  });
+}</div>
+</div>
+
+<h2>🎯 实战示例</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript - API 封装</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">class API {
+  constructor(baseURL) {
+    this.baseURL = baseURL;
+  }
+
+  async request(endpoint, options = {}) {
+    const url = \`\${this.baseURL}\${endpoint}\`;
+    
+    const config = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        throw new Error(\`\${response.status}: \${response.statusText}\`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+
+  get(endpoint) {
+    return this.request(endpoint);
+  }
+
+  post(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  put(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  delete(endpoint) {
+    return this.request(endpoint, {
+      method: 'DELETE'
+    });
+  }
+}
+
+// 使用
+const api = new API('https://api.example.com');
+
+// 获取用户
+const users = await api.get('/users');
+
+// 创建用户
+const newUser = await api.post('/users', {
+  name: 'John',
+  email: 'john@example.com'
+});</div>
+</div>
+
+<h2>⏳ 加载状态处理</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">async function loadUsers() {
+  const loadingEl = document.querySelector('#loading');
+  const errorEl = document.querySelector('#error');
+  const contentEl = document.querySelector('#content');
+
+  try {
+    // 显示加载状态
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    contentEl.style.display = 'none';
+
+    const users = await api.get('/users');
+
+    // 显示内容
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+    contentEl.innerHTML = users.map(user => \`
+      <div class="user">\${user.name}</div>
+    \`).join('');
+
+  } catch (error) {
+    // 显示错误
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = \`加载失败: \${error.message}\`;
+  }
+}</div>
+</div>
+
+<h2>🔄 Promise 工具方法</h2>
+<div class="code-block">
+  <div class="code-header">
+    <span class="code-lang">JavaScript</span>
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+  </div>
+  <div class="code-content">// Promise.all - 所有都成功才成功
+const [users, posts] = await Promise.all([
+  fetchUsers(),
+  fetchPosts()
+]);
+
+// Promise.allSettled - 等待所有完成（不管成功失败）
+const results = await Promise.allSettled([
+  fetchUsers(),
+  fetchPosts(),
+  fetchComments()
+]);
+// [{ status: 'fulfilled', value: ... }, { status: 'rejected', reason: ... }]
+
+// Promise.race - 第一个完成的结果
+const fastest = await Promise.race([
+  fetchFromServer1(),
+  fetchFromServer2()
+]);
+
+// Promise.any - 第一个成功的结果
+const firstSuccess = await Promise.any([
+  fetchFromServer1(),
+  fetchFromServer2()
+]);</div>
+</div>
+
+<div class="info-card success">
+  <div class="info-card-title">🎉 Web 基础完成！</div>
+  <p>恭喜你掌握了 HTML、CSS、JavaScript 基础！现在可以开始学习 Chrome 扩展开发了。</p>
+  <ul>
+    <li>✅ HTML 结构和语义化</li>
+    <li>✅ CSS 布局和样式</li>
+    <li>✅ JavaScript 语法和 DOM</li>
+    <li>✅ ES6+ 现代特性</li>
+    <li>✅ 异步编程和网络请求</li>
+  </ul>
+</div>
+    `
+  }
+};
+
+// 合并到 chapters 对象
+Object.assign(chapters, foundationChapters);
+
+
+
+// 生成其他章节占位内容
+for (let i = 3; i <= 15; i++) {
+  if (!chapters[i]) {
+    chapters[i] = {
+      title: courseData.sections.flatMap(s => s.chapters).find(c => c.id === i)?.title || '章节 ' + i,
+      content: `<p>本章内容正在编写中，敬请期待...</p>
+<div class="info-card tip">
+  <div class="info-card-title">💡 主要内容</div>
+  <p>本章将详细讲解相关技术要点和实战应用。</p>
+</div>`
+    };
+  }
+}
+
+function render() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="hero">
+      <h1>🚀 Chrome 扩展开发完整教程</h1>
+      <div class="hero-subtitle">从入门到精通 · 系统化学习 Manifest V3</div>
+      <div class="hero-meta">
+        <div class="meta-item">📅 2026-01-03</div>
+        <div class="meta-item">⏱️ 40-60h</div>
+        <div class="meta-item">🎯 高级</div>
+        <div class="meta-item">📖 30章</div>
+      </div>
+    </div>
+    ${Object.keys(chapters).map(id => `
+      <div class="chapter" id="chapter${id}">
+        <div class="chapter-header">
+          <div class="chapter-number">${String(id).padStart(2, '0')}</div>
+          <div class="chapter-title">${chapters[id].title}</div>
+        </div>
+        <div class="chapter-content">${chapters[id].content}</div>
+      </div>
+    `).join('')}
+  `;
+
+  const tocList = document.getElementById('tocList');
+  tocList.innerHTML = courseData.sections.map(section => `
+    <div class="toc-section">
+      <div class="toc-section-title">${section.title}</div>
+      ${section.chapters.map(ch => `
+        <div class="toc-item" onclick="scrollToChapter(${ch.id})">
+          ${ch.title}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function scrollToChapter(id) {
+  const chapter = document.getElementById('chapter' + id);
+  if (chapter) {
+    chapter.scrollIntoView({behavior: 'smooth', block: 'start'});
+    if (window.innerWidth <= 1024) {
+      document.getElementById('sidebar').classList.remove('show');
+    }
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('show');
+}
+
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✓ 已复制';
+    btn.style.background = 'rgba(16, 185, 129, 0.3)';
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.style.background = '';
+    }, 2000);
+  }).catch(() => {
+    btn.textContent = '✗ 失败';
+    setTimeout(() => btn.textContent = '复制', 2000);
+  });
+}
+
+// 移动端点击空白处关闭侧边栏
+document.addEventListener('click', (e) => {
+  if (window.innerWidth <= 1024) {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.menu-toggle');
+    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+      sidebar.classList.remove('show');
+    }
+  }
+});
+
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>
